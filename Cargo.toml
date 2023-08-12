@@ -1,0 +1,21 @@
+[package]
+name = "actix-contrib-logger"
+version = "0.1.0"
+edition = "2021"
+
+# See more keys and their definitions at https://doc.rust-lang.org/cargo/reference/manifest.html
+
+[dependencies]
+actix-http = "3.3"
+actix-rt = "2.6"
+actix-service = "2.0"
+actix-utils = "3.0"
+actix-web = "4.3"
+bytes = "1"
+env_logger = "0.10"
+futures-core = { version = "0.3", features = [] }
+http = "0.2"
+pin-project-lite = "0.2"
+log = "0.4"
+regex = "1.9"
+time = { version = "0.3", features = [ "formatting" ] }
