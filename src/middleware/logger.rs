@@ -39,7 +39,7 @@ use http::{HeaderName, StatusCode};
 /// and by default server errors are logged with `ERROR` level.
 ///
 /// Moreover, error in response log are also configurable, and by default logged as `ERROR`
-/// in server side responses.
+/// in server side failures.
 ///
 /// This middleware uses the `log` crate to output information. Enable `log`'s output for the
 /// "http_logger" scope using [`env_logger`](https://docs.rs/env_logger) or similar crate.
@@ -58,9 +58,10 @@ use http::{HeaderName, StatusCode};
 /// ```
 /// use actix_web::App;
 /// use actix_contrib_logger::middleware::Logger;
+/// use env_logger::Env;
 ///
 /// // access logs are printed with the INFO level so ensure it is enabled by default
-/// env_logger::init_from_env(env_logger::Env::new().default_filter_or("info"));
+/// env_logger::init_from_env(Env::new().default_filter_or("info"));
 ///
 /// let app = App::new()
 ///     // .wrap(Logger::default())

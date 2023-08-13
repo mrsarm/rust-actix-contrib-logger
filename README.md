@@ -10,7 +10,7 @@ but it allows to choose the logging level depending on the HTTP status code resp
 and by default server errors are logged with `ERROR` level.
 
 Moreover, error in response log are also configurable, and by default logged as `ERROR`
-in server side responses.
+in server side failures.
 
 The Logger middleware uses the standard log crate to log information. You should enable logger for
 `http_logger` to see access log ([`env_logger`](https://docs.rs/env_logger) or similar).
@@ -22,19 +22,33 @@ HTTP 404 responses (Not Found), and for the rest `INFO` level:
 
 ```rust
 use actix_contrib_logger::middleware::Logger;
+use env_logger::Env;
 use http::StatusCode;
 use log::Level;
 
-let logger = Logger::default()
-    .custom_level(|status| {
-        if status.is_server_error() {
-            Level::Error
-        } else if status == StatusCode::NOT_FOUND {
-            Level::Warn
-        } else {
-            Level::Info
-        }
-    });
+#[actix_web::main]
+async fn main() -> std::io::Result<()> {
+    use actix_web::{App, HttpServer};
+
+    env_logger::init_from_env(Env::default().default_filter_or("info"));
+
+    HttpServer::new(|| {
+        let logger = Logger::default()
+            .custom_level(|status| {
+                if status.is_server_error() {
+                    Level::Error
+                } else if status == StatusCode::NOT_FOUND {
+                    Level::Warn
+                } else {
+                    Level::Info
+                }
+            });
+        App::new().wrap(logger)
+    })
+        .bind(("127.0.0.1", 8080))?
+        .run()
+        .await
+}
 ```
 
 Requests logs will look like:
