@@ -28,7 +28,7 @@ use actix_http::{
 use actix_web::error::Error;
 use actix_web::dev::{ServiceRequest, ServiceResponse};
 use actix_web::error::Result;
-use http::HeaderName;
+use http::{HeaderName, StatusCode};
 
 /// Middleware for logging request and response summaries to the terminal.
 ///
@@ -91,6 +91,8 @@ struct Inner {
     exclude: HashSet<String>,
     exclude_regex: RegexSet,
     log_target: Cow<'static, str>,
+    custom_level_func: Option<fn(StatusCode) -> Level>,
+    custom_resp_error_level_func: Option<fn(StatusCode) -> Level>,
 }
 
 impl Logger {
@@ -100,8 +102,9 @@ impl Logger {
             format: Format::new(format),
             exclude: HashSet::new(),
             exclude_regex: RegexSet::empty(),
-            log_target: Cow::Borrowed(module_path!()),
             log_target: "http_logger".into(),
+            custom_level_func: None,
+            custom_resp_error_level_func: None,
         }))
     }
 
@@ -230,6 +233,18 @@ impl Logger {
 
         self
     }
+
+    pub fn custom_level(mut self, f: fn(StatusCode) -> Level) -> Self {
+        let inner = Rc::get_mut(&mut self.0).unwrap();
+        inner.custom_level_func = Some(f);
+        self
+    }
+
+    pub fn custom_resp_error_level(mut self, f: fn(StatusCode) -> Level) -> Self {
+        let inner = Rc::get_mut(&mut self.0).unwrap();
+        inner.custom_resp_error_level_func = Some(f);
+        self
+    }
 }
 
 impl Default for Logger {
@@ -243,8 +258,9 @@ impl Default for Logger {
             format: Format::default(),
             exclude: HashSet::new(),
             exclude_regex: RegexSet::empty(),
-            log_target: Cow::Borrowed(module_path!()),
             log_target: "http_logger".into(),
+            custom_level_func: None,
+            custom_resp_error_level_func: None,
         }))
     }
 }
@@ -312,6 +328,8 @@ where
                 time: OffsetDateTime::now_utc(),
                 log_target: Cow::Borrowed(""),
                 _phantom: PhantomData,
+                custom_level_func: self.inner.custom_level_func,
+                custom_resp_error_level_func: self.inner.custom_resp_error_level_func,
             }
         } else {
             let now = OffsetDateTime::now_utc();
@@ -327,6 +345,8 @@ where
                 time: now,
                 log_target: self.inner.log_target.clone(),
                 _phantom: PhantomData,
+                custom_level_func: self.inner.custom_level_func,
+                custom_resp_error_level_func: self.inner.custom_resp_error_level_func,
             }
         }
     }
@@ -344,6 +364,8 @@ pin_project! {
         format: Option<Format>,
         log_target: Cow<'static, str>,
         _phantom: PhantomData<B>,
+        custom_level_func: Option<fn(StatusCode) -> Level>,
+        custom_resp_error_level_func: Option<fn(StatusCode) -> Level>,
     }
 }
 
@@ -364,8 +386,16 @@ where
 
         let response = res.response();
         let status: StatusCode = response.status();
+        let level = match this.custom_resp_error_level_func {
+          Some(f) => f(status),
+          None => Level::Debug,
+        };
         if let Some(error) = response.error() {
-            debug!("Error in \"{}\" response: {:?}", status, error);
+            log::log!(
+                target: this.log_target,
+                level,
+                "Error in \"{}\" response: {:?}", status, error
+            );
         }
 
         let res = if let Some(ref mut format) = this.format {
@@ -392,10 +422,13 @@ where
         let format = this.format.take();
         let log_target = this.log_target.clone();
         let status = res.status();
-        let level = if status.is_server_error() {
-            Level::Error
-        } else {
-            Level::Info
+        let level = match this.custom_level_func {
+            Some(f) => f(status),
+            None => if status.is_server_error() {
+                Level::Error
+            } else {
+                Level::Info
+            }
         };
 
         Poll::Ready(Ok(res.map_body(move |_, body| StreamLog {
