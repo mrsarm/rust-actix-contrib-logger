@@ -101,6 +101,7 @@ impl Logger {
             exclude: HashSet::new(),
             exclude_regex: RegexSet::empty(),
             log_target: Cow::Borrowed(module_path!()),
+            log_target: "http_logger".into(),
         }))
     }
 
@@ -125,14 +126,13 @@ impl Logger {
 
     /// Sets the logging target to `target`.
     ///
-    /// By default, the log target is `module_path!()` of the log call location. In our case, that
-    /// would be `actix_web::middleware::logger`.
+    /// By default, the log target is `http_logger`.
     ///
     /// # Examples
-    /// Using `.log_target("http_log")` would have this effect on request logs:
+    /// Using `.log_target("http")` would have this effect on request logs:
     /// ```diff
-    /// - [2015-10-21T07:28:00Z INFO  actix_web::middleware::logger] 127.0.0.1 "GET / HTTP/1.1" 200 88 "-" "dmc/1.0" 0.001985
-    /// + [2015-10-21T07:28:00Z INFO  http_log] 127.0.0.1 "GET / HTTP/1.1" 200 88 "-" "dmc/1.0" 0.001985
+    /// - [2015-10-21T07:28:00Z INFO  http_logger] 127.0.0.1 "GET / HTTP/1.1" 200 88 "-" "dmc/1.0" 0.001985
+    /// + [2015-10-21T07:28:00Z INFO  http] 127.0.0.1 "GET / HTTP/1.1" 200 88 "-" "dmc/1.0" 0.001985
     ///                               ^^^^^^^^
     /// ```
     pub fn log_target(mut self, target: impl Into<Cow<'static, str>>) -> Self {
@@ -244,6 +244,7 @@ impl Default for Logger {
             exclude: HashSet::new(),
             exclude_regex: RegexSet::empty(),
             log_target: Cow::Borrowed(module_path!()),
+            log_target: "http_logger".into(),
         }))
     }
 }
