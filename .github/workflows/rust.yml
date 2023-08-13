@@ -20,4 +20,4 @@ jobs:
     - name: Tests
       run: cargo test
     - name: Docs
-      run: cargo doc
+      run: cargo doc --no-deps
