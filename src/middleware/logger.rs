@@ -32,8 +32,17 @@ use http::{HeaderName, StatusCode};
 
 /// Middleware for logging request and response summaries to the terminal.
 ///
+/// Actually it's a _copy & paste_ from the official [Logger](https://actix.rs/docs/middleware/#logging)
+/// middleware (original [source code](https://github.com/actix/actix-web/blob/master/actix-web/src/middleware/logger.rs)),
+/// but it allows to choose the logging level depending on the HTTP status code responded
+/// (see [`Logger::custom_level()`] and [`Logger::custom_error_resp_level()`]),
+/// and by default server errors are logged with `ERROR` level.
+///
+/// Moreover, error in response log are also configurable, and by default logged as `ERROR`
+/// in server side responses.
+///
 /// This middleware uses the `log` crate to output information. Enable `log`'s output for the
-/// "actix_web" scope using [`env_logger`](https://docs.rs/env_logger) or similar crate.
+/// "http_logger" scope using [`env_logger`](https://docs.rs/env_logger) or similar crate.
 ///
 /// # Default Format
 /// The [`default`](Logger::default) Logger uses the following format:
@@ -47,7 +56,8 @@ use http::{HeaderName, StatusCode};
 ///
 /// # Examples
 /// ```
-/// use actix_web::{middleware::Logger, App};
+/// use actix_web::App;
+/// use actix_contrib_logger::middleware::Logger;
 ///
 /// // access logs are printed with the INFO level so ensure it is enabled by default
 /// env_logger::init_from_env(env_logger::Env::new().default_filter_or("info"));
@@ -78,7 +88,7 @@ use http::{HeaderName, StatusCode};
 ///
 /// # Security
 /// **\*** "Real IP" remote address is calculated using
-/// [`ConnectionInfo::realip_remote_addr()`](crate::dev::ConnectionInfo::realip_remote_addr())
+/// [`ConnectionInfo::realip_remote_addr()`](actix_web::dev::ConnectionInfo::realip_remote_addr())
 ///
 /// If you use this value, ensure that all requests come from trusted hosts. Otherwise, it is
 /// trivial for the remote client to falsify their source IP address.
@@ -136,7 +146,7 @@ impl Logger {
     /// ```diff
     /// - [2015-10-21T07:28:00Z INFO  http_logger] 127.0.0.1 "GET / HTTP/1.1" 200 88 "-" "dmc/1.0" 0.001985
     /// + [2015-10-21T07:28:00Z INFO  http] 127.0.0.1 "GET / HTTP/1.1" 200 88 "-" "dmc/1.0" 0.001985
-    ///                               ^^^^^^^^
+    ///                               ^^^^
     /// ```
     pub fn log_target(mut self, target: impl Into<Cow<'static, str>>) -> Self {
         let inner = Rc::get_mut(&mut self.0).unwrap();
@@ -153,7 +163,7 @@ impl Logger {
     /// # Examples
     /// ```
     /// # use actix_web::http::{header::HeaderValue};
-    /// # use actix_web::middleware::Logger;
+    /// # use actix_contrib_logger::middleware::Logger;
     /// # fn parse_jwt_id (_req: Option<&HeaderValue>) -> String { "jwt_uid".to_owned() }
     /// Logger::new("example %{JWT_ID}xi")
     ///     .custom_request_replace("JWT_ID", |req| parse_jwt_id(req.headers().get("Authorization")));
@@ -197,7 +207,8 @@ impl Logger {
     ///
     /// # Examples
     /// ```
-    /// # use actix_web::{dev::ServiceResponse, middleware::Logger};
+    /// # use actix_web::dev::ServiceResponse;
+    /// # use actix_contrib_logger::middleware::Logger;
     /// fn log_if_error(res: &ServiceResponse) -> String {
     ///     if res.status().as_u16() >= 400 {
     ///         "ERROR".to_string()
@@ -234,13 +245,78 @@ impl Logger {
         self
     }
 
+    /// Register a function that receives a `StatusCode` to define what `Level`
+    /// to use to log an HTTP event.
+    /// By default all HTTP requests are logged with `INFO` severity except the ones ended
+    /// with server errors (`600 > status code >= 500`) that are logged with `ERROR` severity.
+    /// With this function the level used is customized.
+    ///
+    /// # Examples
+    /// In the following example `ERROR` level is used for server errors, `WARN` for
+    /// HTTP 404 responses (Not Found), and for the rest `INFO` level:
+    /// ```
+    /// use actix_contrib_logger::middleware::Logger;
+    /// use http::StatusCode;
+    /// use log::Level;
+    ///
+    /// let logger = Logger::default()
+    ///     .custom_level(|status| {
+    ///         if status.is_server_error() {
+    ///             Level::Error
+    ///         } else if status == StatusCode::NOT_FOUND {
+    ///             Level::Warn
+    ///         } else {
+    ///             Level::Info
+    ///         }
+    ///     });
+    /// ```
+    ///
+    /// Requests logs will look like:
+    ///
+    /// ```plain
+    /// [2023-08-13T07:28:00Z INFO  http_logger] 127.0.0.1 "GET / HTTP/1.1" 200 802 "-" "Mozilla/5.0 ..." 0.001985
+    /// [2023-08-13T07:29:10Z ERROR http_logger] 127.0.0.1 "POST /users HTTP/1.1" 500 86 "-" "curl/7.68.0" 0.002023
+    /// [2023-08-13T07:29:10Z WARN  http_logger] 127.0.0.1 "PUT /users HTTP/1.1" 404 55 "-" "HTTPie/3.2.1" 0.002023
+    /// ```
     pub fn custom_level(mut self, f: fn(StatusCode) -> Level) -> Self {
         let inner = Rc::get_mut(&mut self.0).unwrap();
         inner.custom_level_func = Some(f);
         self
     }
-
-    pub fn custom_resp_error_level(mut self, f: fn(StatusCode) -> Level) -> Self {
+    /// Register a function that receives a `StatusCode` to define what `Level`
+    /// to use to log an error in the response.
+    /// By default all error in responses are logged with `DEBUG` severity except the ones ended
+    /// with server errors (`600 > status code >= 500`) that are logged with `ERROR` severity.
+    /// With this function the level used is customized.
+    ///
+    /// # Examples
+    /// In the following example `ERROR` level is used for server errors, `INFO` level
+    /// instead of `DEBUG` for the rest:
+    /// ```
+    /// use actix_contrib_logger::middleware::Logger;
+    /// use http::StatusCode;
+    /// use log::Level;
+    ///
+    /// let logger = Logger::default()
+    ///     .custom_error_resp_level(|status| {
+    ///         if status.is_server_error() {
+    ///             Level::Error
+    ///         } else {
+    ///             Level::Info
+    ///         }
+    ///     });
+    /// ```
+    ///
+    /// Requests logs with errors will look like (the error in response logs are the first
+    /// and the third lines):
+    ///
+    /// ```plain
+    /// [2023-08-13T21:51:02Z INFO  http_logger] Error in "400 Bad Request" response: Validation("Tenant already exists.")
+    /// [2023-08-13T21:51:02Z INFO  http_logger] 127.0.0.1 "POST /tenants HTTP/1.1" 400 56 "-" "HTTPie/3.2.1" 0.002368
+    /// [2023-08-13T20:59:53Z ERROR http_logger] Error in "500 Internal Server Error" response: DB(PoolTimedOut)
+    /// [2023-08-13T07:59:53Z ERROR http_logger] 127.0.0.1 "POST /users HTTP/1.1" 500 86 "-" "curl/7.68.0" 0.002023
+    /// ```
+    pub fn custom_error_resp_level(mut self, f: fn(StatusCode) -> Level) -> Self {
         let inner = Rc::get_mut(&mut self.0).unwrap();
         inner.custom_resp_error_level_func = Some(f);
         self
