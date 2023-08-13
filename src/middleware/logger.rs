@@ -361,8 +361,10 @@ where
             Err(e) => return Poll::Ready(Err(e)),
         };
 
-        if let Some(error) = res.response().error() {
-            debug!("Error in response: {:?}", error);
+        let response = res.response();
+        let status: StatusCode = response.status();
+        if let Some(error) = response.error() {
+            debug!("Error in \"{}\" response: {:?}", status, error);
         }
 
         let res = if let Some(ref mut format) = this.format {
