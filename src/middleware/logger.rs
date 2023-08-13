@@ -388,7 +388,13 @@ where
         let status: StatusCode = response.status();
         let level = match this.custom_resp_error_level_func {
           Some(f) => f(status),
-          None => Level::Debug,
+          None => {
+              if status.is_server_error() {
+                  Level::Error
+              } else {
+                  Level::Debug
+              }
+          },
         };
         if let Some(error) = response.error() {
             log::log!(
@@ -424,10 +430,12 @@ where
         let status = res.status();
         let level = match this.custom_level_func {
             Some(f) => f(status),
-            None => if status.is_server_error() {
-                Level::Error
-            } else {
-                Level::Info
+            None => {
+                if status.is_server_error() {
+                    Level::Error
+                } else {
+                    Level::Info
+                }
             }
         };
 
