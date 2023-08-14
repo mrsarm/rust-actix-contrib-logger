@@ -9,7 +9,7 @@ but it allows to choose the logging level depending on the HTTP status code resp
 (see `Logger::custom_level()` and `Logger::custom_error_resp_level()`)
 and by default server errors are logged with `ERROR` level.
 
-Moreover, error in response log are also configurable, and by default logged as `ERROR`
+Moreover, error in response logs are also configurable, and by default logged as `ERROR`
 in server side failures.
 
 The Logger middleware uses the standard log crate to log information. You should enable logger for
@@ -62,7 +62,7 @@ Requests logs will look like:
 Using the method `logger.custom_error_resp_level()` the log level of error in responses are
 also configurable, otherwise by default like the original logger all are printed in `DEBUG`
 level, except for server errors that are printed out in `ERROR` level. The log also includes
-the HTTP status information (original logger don't). E.g.:
+the HTTP status information (original logger doesn't). E.g.:
 
 ```
 [2023-08-13T20:59:53Z ERROR http_logger] Error in "500 Internal Server Error" response: DB(PoolTimedOut)
