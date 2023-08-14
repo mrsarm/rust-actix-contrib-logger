@@ -17,6 +17,11 @@ readme = "README.md"
 homepage = "https://github.com/mrsarm/rust-actix-contrib-logger"
 repository = "https://github.com/mrsarm/rust-actix-contrib-logger"
 categories = ["log", "logging", "logger", "actix-web", "http"]
+exclude = [
+    ".github/workflows/",
+    ".gitignore",
+    ".editorconfig",
+]
 
 [dependencies]
 actix-http = "3.3"
