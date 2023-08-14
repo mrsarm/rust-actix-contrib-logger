@@ -2,8 +2,21 @@
 name = "actix-contrib-logger"
 version = "0.1.0"
 edition = "2021"
-
-# See more keys and their definitions at https://doc.rust-lang.org/cargo/reference/manifest.html
+description = "Drop-in replacement for the Actix Web Logger middleware"
+license = "MIT OR Apache-2.0"
+authors = [
+    "Mariano Ruiz <mrsarm@gmail.com>",
+    "Rob Ede <robjtede@icloud.com>",
+    "Nikolay Kim <fafhrd91@gmail.com>",
+    "Joshua Parkin <josh.parkin@coasys.org>",
+    "Yuki Okushi <jtitor@2k36.orgjtitor@2k36.org>",
+    "Benny Nazimov (https://github.com/benny-n)",
+    "Maxim Vorobjov (https://github.com/dunnock)",
+]
+readme = "README.md"
+homepage = "https://github.com/mrsarm/rust-actix-contrib-logger"
+repository = "https://github.com/mrsarm/rust-actix-contrib-logger"
+categories = ["log", "logging", "logger", "actix-web", "http"]
 
 [dependencies]
 actix-http = "3.3"
