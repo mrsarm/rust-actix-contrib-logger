@@ -6,19 +6,20 @@ Logger middleware for the [Actix Web framework](https://actix.rs/).
 Actually it's a _copy & paste_ from the official [Logger](https://actix.rs/docs/middleware/#logging)
 middleware (original [source code](https://github.com/actix/actix-web/blob/master/actix-web/src/middleware/logger.rs)),
 but it allows to choose the logging level depending on the HTTP status code responded,
-(see `Logger::custom_level()` and `Logger::custom_error_resp_level()`)
+(see [`Logger::custom_level()`](https://docs.rs/actix-contrib-logger/latest/actix_contrib_logger/middleware/struct.Logger.html#method.custom_level)
+and [`Logger::custom_error_resp_level()`](https://docs.rs/actix-contrib-logger/latest/actix_contrib_logger/middleware/struct.Logger.html#method.custom_error_resp_level))
 and by default server errors are logged with `ERROR` level.
 
 Moreover, error in response logs are also configurable, and by default logged as `ERROR`
-in server side failures.
+for server side failures.
 
 The Logger middleware uses the standard log crate to log information. You should enable logger for
-`http_logger` to see access log ([`env_logger`](https://docs.rs/env_logger) or similar).
+the `http_logger` to see access logs ([`env_logger`](https://docs.rs/env_logger) or similar).
 
 ### Examples
 
 In the following example `ERROR` level is used for server errors, `WARN` for
-HTTP 404 responses (Not Found), and for the rest `INFO` level:
+HTTP 404 responses (_Not Found_), and for the rest `INFO` level:
 
 ```rust
 use actix_contrib_logger::middleware::Logger;
@@ -59,10 +60,10 @@ Requests logs will look like:
 [2023-08-13T07:29:10Z WARN  http_logger] 127.0.0.1 "PUT /users HTTP/1.1" 404 55 "-" "HTTPie/3.2.1" 0.002023
 ```
 
-Using the method `logger.custom_error_resp_level()` the log level of error in responses are
-also configurable, otherwise by default like the original logger all are printed in `DEBUG`
-level, except for server errors that are printed out in `ERROR` level. The log also includes
-the HTTP status information (original logger doesn't). E.g.:
+Using the method [`logger.custom_error_resp_level()`](https://docs.rs/actix-contrib-logger/latest/actix_contrib_logger/middleware/struct.Logger.html#method.custom_error_resp_level)
+the log level of error in responses are also configurable, otherwise by default like the original
+logger all are printed in `DEBUG` level, except for server errors that are printed out in `ERROR` level.
+The log also includes the HTTP status information (original logger doesn't). E.g.:
 
 ```
 [2023-08-13T20:59:53Z ERROR http_logger] Error in "500 Internal Server Error" response: DB(PoolTimedOut)
